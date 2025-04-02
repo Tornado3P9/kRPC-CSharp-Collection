@@ -1,10 +1,9 @@
 ﻿// dotnet add package KRPC.Client --version 0.5.4
 // dotnet add package Google.Protobuf --version 3.30.1
-// dotnet add package System.CommandLine --version 2.0.0-beta4.22272.1
 
-using System;
-using System.Collections.Generic;
-using System.Net;
+// using System;
+// using System.Collections.Generic;
+// using System.Net;
 using System.Diagnostics;
 using KRPC.Client;
 using KRPC.Client.Services.SpaceCenter;
