@@ -205,6 +205,7 @@ class Program
         vessel.Control.Throttle = 1;
         Thread.Sleep((int)(burnTime * 1000));
         vessel.Control.Throttle = 0;
+        Console.WriteLine("Burn finished");
 
         // Finalize launch
         node.Remove();
@@ -212,6 +213,8 @@ class Program
         vessel.AutoPilot.Disengage();
         vessel.Control.SAS = true;
         vessel.Control.SASMode = SASMode.StabilityAssist;
+        Console.WriteLine("Waiting for steering to settle down");
+        Thread.Sleep(3000);
         var apoapsisAltitude = vessel.Orbit.ApoapsisAltitude / 1000.0;
         var periapsisAltitude = vessel.Orbit.PeriapsisAltitude / 1000.0;
         var semiMajorAxis = vessel.Orbit.SemiMajorAxis / 1000.0;
