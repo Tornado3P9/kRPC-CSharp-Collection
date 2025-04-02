@@ -8,6 +8,7 @@ using System.Net;
 using System.Diagnostics;
 using KRPC.Client;
 using KRPC.Client.Services.SpaceCenter;
+using KRPC.Client.Services.UI;
 
 class Program
 {
@@ -20,8 +21,12 @@ class Program
         var conn = new Connection("Launch into orbit");
         var vessel = conn.SpaceCenter().ActiveVessel;
 
-        float targetAltitude = 90000;
+        float targetAltitude = target;
         float current_Altitude = 0;
+        var uiElements = SetupUI(conn, auto_throttle);
+        var panel = uiElements.Item1;
+        var button = uiElements.Item2;
+        var buttonClicked = uiElements.Item3;
 
         // Set up streams for telemetry
         var ut = conn.AddStream(() => conn.SpaceCenter().UT);
@@ -76,12 +81,16 @@ class Program
         vessel.AutoPilot.TargetRoll = 0;
         vessel.AutoPilot.TargetPitchAndHeading(90, compass);
 
+        // Unhide UI elements
+        panel.Visible = true;
+        button.Visible = true;
+        
         // Main ascent loop
-        Stopwatch stopwatch = new();  // Stopwatch for deltaTime calculation
+        Console.WriteLine("Gravity turn");
+        Stopwatch stopwatch = new();  // deltaTime calculation
         stopwatch.Start();
         float pitch = 0;
         counter = 0;
-        Console.WriteLine("Gravity turn");
         while (true)
         {
             // Gravity turn
@@ -95,7 +104,6 @@ class Program
             {
                 vessel.Control.Throttle = 0;
                 Console.WriteLine("Target apoapsis reached");
-                apoapsis.Remove();
                 break;
             }
 
@@ -108,21 +116,38 @@ class Program
                 vessel.Control.ActivateNextStage();
             }
 
-            // Calculate deltaTime
-            double deltaTime = stopwatch.Elapsed.TotalSeconds;
-            stopwatch.Restart();
+            if (auto_throttle)
+            {
+                // Calculate deltaTime
+                double deltaTime = stopwatch.Elapsed.TotalSeconds;
+                stopwatch.Restart();
 
-            // Calculate TWR error
-            currentTWR = vessel.Thrust / (vessel.Mass * vessel.Orbit.Body.SurfaceGravity);
-            error = currentTWR - targetTWR;
+                // Calculate TWR error
+                currentTWR = vessel.Thrust / (vessel.Mass * vessel.Orbit.Body.SurfaceGravity);
+                error = currentTWR - targetTWR;
 
-            // Update Controller
-            throttle = (float)i.Update(error, deltaTime);
-            vessel.Control.Throttle = throttle;
+                // Update Controller
+                throttle = (float)i.Update(error, deltaTime);
+                vessel.Control.Throttle = throttle;
+            }
+
+            // Handle the throttle button being clicked
+            if (buttonClicked.Get())
+            {
+                auto_throttle = !auto_throttle;
+                button.Text.Content = auto_throttle ? "On" : "Off";
+                button.Clicked = false;
+            }
 
             // Sleep for a short duration to prevent excessive CPU usage
             Thread.Sleep(100);
         }
+
+        // Stop Redundant Streams and Remove UI elements
+        apoapsis.Remove();
+        buttonClicked.Remove();
+        button.Remove();
+        panel.Remove();
 
         // Wait until out of atmosphere
         Console.WriteLine("Coasting out of atmosphere");
@@ -167,7 +192,7 @@ class Program
         Console.WriteLine("Waiting until circularization burn");
         double burnUT = ut.Get() + vessel.Orbit.TimeToApoapsis - half_burnTime;
         ut.Remove();
-        double leadTime = 50;
+        double leadTime = 20;
         conn.SpaceCenter().WarpTo(burnUT - leadTime);
 
         // Execute burn
@@ -214,10 +239,10 @@ class Program
                 Console.WriteLine("Options:");
                 Console.WriteLine("  -h, --help        Show help information");
                 Console.WriteLine("  -V, --version     Show version information");
-                Console.WriteLine("  --target=<int>    target altitude (default: 90000)");
-                Console.WriteLine("  --compass=<int>   horizontal compass direction in degrees (default: 90)");
-                Console.WriteLine("  --auto_throttle=<bool>   Auto Throttle (default: True)");
-                Console.WriteLine("  --ag5=<bool>      A boolean flag for Action Group 5 (default: True)");
+                Console.WriteLine($"  --target=<int>    target altitude (default: {target})");
+                Console.WriteLine($"  --compass=<int>   horizontal compass direction in degrees (default: {compass})");
+                Console.WriteLine($"  --auto_throttle=<bool>   Auto Throttle (default: {auto_throttle})");
+                Console.WriteLine($"  --ag5=<bool>      A boolean flag for Action Group 5 (default: {ag5})");
                 Environment.Exit(0);
             }
             if (arg == "--version" || arg == "-V")
@@ -256,6 +281,41 @@ class Program
         }
 
         return (target, compass, auto_throttle, ag5);
+    }
+
+    static Tuple<Panel, Button, Stream<bool>> SetupUI(Connection conn, bool autoThrottle)
+    {
+        var canvas = conn.UI().StockCanvas;
+
+        // Get the size of the game window in pixels
+        var screenSize = canvas.RectTransform.Size;
+
+        // Add a panel to contain the UI elements
+        var panel = canvas.AddPanel();
+
+        // Position the panel on the left of the screen
+        var rect = panel.RectTransform;
+        rect.Size = Tuple.Create(200.0, 85.0);
+        rect.Position = Tuple.Create(screenSize.Item1 / 4, screenSize.Item2 / 2.3);
+
+        // Add a button to set the throttle to maximum
+        var button = panel.AddButton(autoThrottle ? "On" : "Off");
+        button.RectTransform.Position = Tuple.Create(0.0, -12.0);
+
+        // Add some text displaying the total engine thrust
+        var text = panel.AddText("Auto Throttle");
+        text.RectTransform.Position = Tuple.Create(0.0, 12.0);
+        text.Color = Tuple.Create(1.0, 1.0, 1.0);
+        text.Size = 18;
+
+        // Hide UI elements for the beginning
+        panel.Visible = false;
+        button.Visible = false;
+
+        // Set up a stream to monitor the throttle button
+        var buttonClicked = conn.AddStream(() => button.Clicked);
+
+        return new Tuple<Panel, Button, Stream<bool>>(panel, button, buttonClicked);
     }
 }
 
