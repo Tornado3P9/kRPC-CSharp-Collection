@@ -1,9 +1,6 @@
 ﻿// dotnet add package KRPC.Client --version 0.5.4
 // dotnet add package Google.Protobuf --version 3.30.1
 
-// using System;
-// using System.Collections.Generic;
-// using System.Net;
 using System.Diagnostics;
 using KRPC.Client;
 using KRPC.Client.Services.SpaceCenter;
@@ -147,6 +144,7 @@ class Program
         buttonClicked.Remove();
         button.Remove();
         panel.Remove();
+        stopwatch.Stop();
 
         // Wait until out of atmosphere
         Console.WriteLine("Coasting out of atmosphere");
