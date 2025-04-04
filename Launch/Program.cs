@@ -122,7 +122,7 @@ class Program
                 currentTWR = vessel.Thrust / (vessel.Mass * vessel.Orbit.Body.SurfaceGravity);
                 error = currentTWR - targetTWR;
 
-                // Update Controller
+                // Update Throttle
                 throttle = (float)i.Update(error, deltaTime);
                 vessel.Control.Throttle = throttle;
             }
