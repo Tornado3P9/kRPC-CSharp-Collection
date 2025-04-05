@@ -267,7 +267,7 @@ internal class Program
                     }
                     else
                     {
-                        throw new ArgumentException("Invalid target altitude.");
+                        throw new ArgumentException("Invalid target altitude int value.");
                     }
                 }
                 else if (arg.StartsWith("--compass="))
@@ -278,7 +278,7 @@ internal class Program
                     }
                     else
                     {
-                        throw new ArgumentException("Invalid compass direction.");
+                        throw new ArgumentException("Invalid compass direction int value.");
                     }
                 }
                 else if (arg.StartsWith("--auto_throttle="))
